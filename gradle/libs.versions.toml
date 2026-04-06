@@ -17,7 +17,7 @@ compose-material3 = { module = "androidx.compose.material3:material3", version =
 compose-coil = { module = "io.coil-kt:coil-compose", version = "2.6.0" }
 compose-navigation = { module = "androidx.navigation:navigation-compose", version = "2.7.7" }
 compose-lottie = { module = "com.airbnb.android:lottie-compose", version = "6.4.0" }
-xposed-api = { module = "de.robv.android.xposed:api", version = "101" }
+xposed-api = { module = "de.robv.android.xposed:api", version = "82" }
 #https://github.com/HighCapable/YukiHookAPI
 yukihook-api = { module = "com.highcapable.yukihookapi:api", version.ref = "yuki" }
 yukihook-ksp = { module = "com.highcapable.yukihookapi:ksp-xposed", version.ref = "yuki" }
