@@ -57,7 +57,11 @@ class HookEntry : IYukiHookXposedInit {
     override fun onHook() = YukiHookAPI.encase {
         if ("com.qidian.QDReader" !in packageName) return@encase
         loadApp(name = packageName) {
-            HookDiagnostics.beginSession(packageName = packageName, versionCode = actualVersionCode)
+            HookDiagnostics.beginSession(
+                packageName = packageName,
+                versionCode = actualVersionCode,
+                mode = "legacy"
+            )
 
             onAppLifecycle {
                 onCreate {

@@ -111,8 +111,8 @@ android {
     composeOptions.kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
 
     packagingOptions.apply {
+        resources.merges += mutableSetOf("META-INF/xposed/*")
         resources.excludes += mutableSetOf(
-            "META-INF/**",
             "**/*.properties",
             "okhttp3/**",
             "schema/**",
@@ -149,6 +149,7 @@ dependencies {
     ksp(libs.yukihook.ksp)
 
     compileOnly(libs.xposed.api)
+    compileOnly(libs.libxposed.api)
 }
 
 tasks.dokkaHtml {

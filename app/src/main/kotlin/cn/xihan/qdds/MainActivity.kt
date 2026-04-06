@@ -1295,7 +1295,7 @@ private fun CompatibilityDiagnosticCard(
     PrimaryCard(title = "兼容性诊断", modifier = modifier) {
         Column(modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) {
             Text(
-                text = "起点内部版本号: $versionCode\nLSPosed API 最低要求: ${HookDiagnostics.MIN_API_VERSION}+",
+                text = "起点内部版本号: $versionCode\nHook 运行模式: ${HookDiagnostics.sessionMode}\nLSPosed API 最低要求: ${HookDiagnostics.MIN_API_VERSION}+",
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(8.dp))

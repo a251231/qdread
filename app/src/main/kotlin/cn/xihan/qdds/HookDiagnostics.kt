@@ -74,19 +74,22 @@ object HookDiagnostics {
         private set
     var sessionVersionCode by mutableStateOf(0)
         private set
+    var sessionMode by mutableStateOf("legacy")
+        private set
     var sessionActive by mutableStateOf(false)
         private set
     var diagnostics by mutableStateOf<List<HookDiagnostic>>(emptyList())
         private set
 
     @Synchronized
-    fun beginSession(packageName: String, versionCode: Int) {
+    fun beginSession(packageName: String, versionCode: Int, mode: String = sessionMode) {
         if (sessionPackageName != packageName || sessionVersionCode != versionCode || !sessionActive) {
             registry.clear()
             diagnostics = emptyList()
         }
         sessionPackageName = packageName
         sessionVersionCode = versionCode
+        sessionMode = mode
         sessionActive = true
     }
 
@@ -125,7 +128,7 @@ object HookDiagnostics {
     }
 }
 
-inline fun PackageParam.trackFeature(featureId: HookFeatureId, block: PackageParam.() -> Unit) {
+inline fun trackHookFeature(featureId: HookFeatureId, block: () -> Unit) {
     HookDiagnostics.markPending(featureId)
     runCatching {
         block()
@@ -136,17 +139,20 @@ inline fun PackageParam.trackFeature(featureId: HookFeatureId, block: PackagePar
     }
 }
 
+inline fun PackageParam.trackFeature(featureId: HookFeatureId, block: PackageParam.() -> Unit) =
+    trackHookFeature(featureId) { block(this) }
+
 inline fun PackageParam.trackFeature(
     key: String,
     displayName: String,
     block: PackageParam.() -> Unit,
-) = trackFeature(HookFeatureId.named(key, displayName), block)
+) = trackHookFeature(HookFeatureId.named(key, displayName)) { block(this) }
 
 inline fun PackageParam.trackSelectedFeature(
     group: String,
     title: String,
     block: PackageParam.() -> Unit,
-) = trackFeature(HookFeatureId.fromTitle(group, title), block)
+) = trackHookFeature(HookFeatureId.fromTitle(group, title)) { block(this) }
 
 private fun stableHash(value: String): String {
     val digest = MessageDigest.getInstance("SHA-1").digest(value.toByteArray())

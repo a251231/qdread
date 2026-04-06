@@ -4,12 +4,12 @@
 
     <application
         android:allowBackup="true"
-        android:label="QDReadHook"
-        android:supportsRtl="true"
-        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="QDReadHook"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:requestLegacyExternalStorage="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar">
 
         <meta-data
@@ -17,7 +17,7 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="起点阅读增强功能，最佳努力适配新版，兼容性以诊断页为准" />
+            android:value="起点阅读增强功能（LSPosed modern API 101 迁移中）" />
         <meta-data
             android:name="xposedminversion"
             android:value="101+" />
@@ -31,8 +31,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:showForAllUsers="true"
-            android:launchMode="singleInstance">
+            android:launchMode="singleInstance"
+            android:showForAllUsers="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -44,20 +44,18 @@
 
         <activity-alias
             android:name=".MainActivityAlias"
-            android:targetActivity=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
             </intent-filter>
         </activity-alias>
-
-
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
