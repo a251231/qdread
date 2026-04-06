@@ -45,6 +45,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
       - name: Build with Gradle
         run: |
           [ $(du -s ~/.gradle/wrapper | awk '{ print $1 }') -gt 250000 ] && rm -rf ~/.gradle/wrapper/* || true
