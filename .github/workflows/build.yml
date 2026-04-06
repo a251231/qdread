@@ -19,6 +19,7 @@ jobs:
         os: [ ubuntu-latest ]
     env:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN || github.token }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Check Commit Message [skip CI]
@@ -51,13 +52,31 @@ jobs:
 
       - name: Build with Gradle
         run: |
+          set -o pipefail
           [ $(du -s ~/.gradle/wrapper | awk '{ print $1 }') -gt 250000 ] && rm -rf ~/.gradle/wrapper/* || true
           chmod +x gradlew
-          ./gradlew :app:synthesizeDistReleaseApksCI
+          mkdir -p build-logs
+          ./gradlew :app:synthesizeDistReleaseApksCI --stacktrace --info 2>&1 | tee build-logs/gradle-build.log
           echo "APK_FILE_ARM32=$(find app/build/outputs/ci -name '*arm32.apk')" >> $GITHUB_ENV
           echo "APK_FILE_ARM64=$(find app/build/outputs/ci -name '*arm64.apk')" >> $GITHUB_ENV
           echo "APK_FILE_ARMALL=$(find app/build/outputs/ci -name '*armAll.apk')" >> $GITHUB_ENV
           echo "APK_FILE_UNIVERSAL=$(find app/build/outputs/ci -name '*universal.apk')" >> $GITHUB_ENV
+
+      - name: Summarize failure logs
+        if: failure()
+        run: |
+          echo "## Gradle failure tail" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          tail -n 200 build-logs/gradle-build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-logs-${{ github.ref_name }}
+          path: build-logs/
+          if-no-files-found: warn
 
       - name: Upload assets to a Release
         uses: meeDamian/github-release@v2.0.3
