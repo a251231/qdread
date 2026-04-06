@@ -65,6 +65,14 @@ jobs:
       - name: Summarize failure logs
         if: failure()
         run: |
+          SUMMARY=$(grep -E "^[[:space:]]*e: |What went wrong:|^Caused by:|Execution failed|Compilation error|Unresolved reference|No value passed|Type mismatch|Expecting|Could not determine|FAILURE: Build failed" build-logs/gradle-build.log | tail -n 20 || true)
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY=$(tail -n 20 build-logs/gradle-build.log || true)
+          fi
+          SUMMARY="${SUMMARY//'%'/'%25'}"
+          SUMMARY="${SUMMARY//$'\n'/'%0A'}"
+          SUMMARY="${SUMMARY//$'\r'/'%0D'}"
+          echo "::error title=Gradle build failed::$SUMMARY"
           echo "## Gradle failure tail" >> $GITHUB_STEP_SUMMARY
           echo '```text' >> $GITHUB_STEP_SUMMARY
           tail -n 200 build-logs/gradle-build.log >> $GITHUB_STEP_SUMMARY
