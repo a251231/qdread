@@ -6,7 +6,7 @@ import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import java.lang.reflect.Member
+import java.lang.reflect.Executable
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val modernBootstrapFeature = HookFeatureId.named(
@@ -66,8 +66,8 @@ class ModernHookEntry : XposedModule() {
     }
 
     private fun hookAfter(
-        member: Member,
-        block: (thisObject: Any?, args: Array<Any?>, result: Any?) -> Unit,
+        member: Executable,
+        block: (thisObject: Any?, args: List<Any?>, result: Any?) -> Unit,
     ) {
         hook(member).intercept { chain ->
             val result = chain.proceed()
