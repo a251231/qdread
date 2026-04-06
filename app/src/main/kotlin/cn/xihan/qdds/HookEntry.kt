@@ -57,6 +57,7 @@ class HookEntry : IYukiHookXposedInit {
     override fun onHook() = YukiHookAPI.encase {
         if ("com.qidian.QDReader" !in packageName) return@encase
         loadApp(name = packageName) {
+            HookDiagnostics.beginSession(packageName = packageName, versionCode = actualVersionCode)
 
             onAppLifecycle {
                 onCreate {
@@ -71,7 +72,9 @@ class HookEntry : IYukiHookXposedInit {
             }
 
             if (optionEntity.mainOption.enableStartCheckingPermissions) {
-                startCheckingPermissions(versionCode)
+                trackFeature(HookFeatures.StartPermissions) {
+                    startCheckingPermissions(versionCode)
+                }
             }
 
             "com.qidian.QDReader.ui.activity.MoreActivity".toClass().apply {
@@ -117,55 +120,79 @@ class HookEntry : IYukiHookXposedInit {
     private fun PackageParam.mainFunction(versionCode: Int, bridge: DexKitBridge) {
 
         if (optionEntity.mainOption.enablePostToShowImageUrl) {
-            postToShowImageUrl(versionCode, bridge)
+            trackFeature(HookFeatures.PostImageUrl) {
+                postToShowImageUrl(versionCode, bridge)
+            }
         }
 
         if (optionEntity.mainOption.enableUnlockMemberBackground) {
-            unlockMemberBackground(versionCode)
+            trackFeature(HookFeatures.UnlockMemberBackground) {
+                unlockMemberBackground(versionCode)
+            }
         }
 
         if (optionEntity.mainOption.enableFreeAdReward) {
-            freeAdReward(versionCode)
+            trackFeature(HookFeatures.FreeAdReward) {
+                freeAdReward(versionCode)
+            }
         }
 
         if (optionEntity.mainOption.enableIgnoreFreeSubscribeLimit) {
-            ignoreFreeSubscribeLimit(versionCode, bridge)
+            trackFeature(HookFeatures.IgnoreFreeSubscribeLimit) {
+                ignoreFreeSubscribeLimit(versionCode, bridge)
+            }
         }
 
         if (optionEntity.mainOption.enableExportEmoji) {
-            exportEmoji(versionCode)
+            trackFeature(HookFeatures.ExportEmoji) {
+                exportEmoji(versionCode)
+            }
         }
 
         if (optionEntity.mainOption.enableOldDailyRead) {
-            oldDailyRead(versionCode, bridge)
+            trackFeature(HookFeatures.OldDailyRead) {
+                oldDailyRead(versionCode, bridge)
+            }
         }
 
         if (optionEntity.mainOption.enableDefaultImei) {
-            defaultIMEI(versionCode, bridge)
+            trackFeature(HookFeatures.DefaultImei) {
+                defaultIMEI(versionCode, bridge)
+            }
         }
 
         if (optionEntity.cookieOption.enableCookie) {
-            cookie(versionCode, bridge)
+            trackFeature(HookFeatures.Cookie) {
+                cookie(versionCode, bridge)
+            }
         }
 
         if (optionEntity.cookieOption.enableDebug) {
-            debug(versionCode, bridge)
+            trackFeature(HookFeatures.Debug) {
+                debug(versionCode, bridge)
+            }
         }
 
         if (optionEntity.readPageOption.enableReadTimeFactor) {
-            readingTimeSpeedFactor(
-                versionCode = versionCode,
-                speedFactor = optionEntity.readPageOption.speedFactor,
-                bridge = bridge
-            )
+            trackFeature(HookFeatures.ReadingTimeSpeedFactor) {
+                readingTimeSpeedFactor(
+                    versionCode = versionCode,
+                    speedFactor = optionEntity.readPageOption.speedFactor,
+                    bridge = bridge
+                )
+            }
         }
 
         if (optionEntity.readPageOption.enableRedirectReadingPageBackgroundPath) {
-            redirectReadingPageBackgroundPath(versionCode, bridge)
+            trackFeature(HookFeatures.RedirectReadingPageBackground) {
+                redirectReadingPageBackgroundPath(versionCode, bridge)
+            }
         }
 
         if (optionEntity.startImageOption.enableRedirectLocalStartImage) {
-            customLocalStartImage(versionCode)
+            trackFeature(HookFeatures.RedirectLocalStartImage) {
+                customLocalStartImage(versionCode)
+            }
         }
 
         advOption(versionCode, optionEntity.advOption, bridge)
@@ -174,130 +201,160 @@ class HookEntry : IYukiHookXposedInit {
 
         homeOption(versionCode, optionEntity.viewHideOption.homeOption.configurations, bridge)
 
-        hideBottom(
-            versionCode = versionCode,
-            hideRedDot = optionEntity.viewHideOption.enableHideRedDot,
-            hideNavigation = optionEntity.viewHideOption.homeOption.enableCaptureBottomNavigation,
-            bridge = bridge
-        )
+        trackFeature(HookFeatures.HideBottom) {
+            hideBottom(
+                versionCode = versionCode,
+                hideRedDot = optionEntity.viewHideOption.enableHideRedDot,
+                hideNavigation = optionEntity.viewHideOption.homeOption.enableCaptureBottomNavigation,
+                bridge = bridge
+            )
+        }
 
         if (optionEntity.viewHideOption.selectedOption.enableSelectedHide) {
-            selectedOption(versionCode)
+            trackFeature("view.selected_option", "选项配置列表") {
+                selectedOption(versionCode)
+            }
         }
 
         if (optionEntity.viewHideOption.selectedOption.enableSelectedTitleHide) {
-            selectedTitleOption(versionCode)
+            trackFeature("view.selected_title_option", "精选-标题隐藏") {
+                selectedTitleOption(versionCode)
+            }
         }
 
-        searchOption(versionCode, optionEntity.viewHideOption.searchOption, bridge)
+        trackFeature(HookFeatures.SearchOption) {
+            searchOption(versionCode, optionEntity.viewHideOption.searchOption, bridge)
+        }
 
         if (optionEntity.viewHideOption.accountOption.enableHideAccountRightTopRedDot) {
-            accountRightTopRedDot(versionCode)
+            trackFeature("view.account_right_top_red_dot", "我-右上角消息红点") {
+                accountRightTopRedDot(versionCode)
+            }
         }
 
         if (optionEntity.viewHideOption.accountOption.enableHideAccount) {
-            accountViewHide(versionCode)
+            trackFeature("view.account_hide", "我-隐藏控件") {
+                accountViewHide(versionCode)
+            }
         }
 
         if (optionEntity.viewHideOption.enableHideRedDot) {
-            hideRedDot(versionCode)
+            trackFeature("view.hide_red_dot", "隐藏小红点") {
+                hideRedDot(versionCode)
+            }
         }
 
         if (optionEntity.viewHideOption.enableHideBookDetail) {
-            bookDetailHide(
-                versionCode = versionCode,
-                isNeedHideCqzs = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "出圈指数"
-                ),
-                isNeedHideRybq = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "荣誉标签"
-                ),
-                isNeedHideQqGroups = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "QQ群"
-                ),
-                isNeedHideSyq = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "书友圈"
-                ),
-                isNeedHideSyb = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "书友榜"
-                ),
-                isNeedHideYpjz = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "月票金主"
-                ),
-                isNeedHideCenterAd = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "本书看点|中心广告"
-                ),
-                isNeedHideFloatAd = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "浮窗广告"
-                ),
-                isNeedHideBookRecommend = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "同类作品推荐"
-                ),
-                isNeedHideBookRecommend2 = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
-                    "看过此书的人还看过"
+            trackFeature(HookFeatures.BookDetailHide) {
+                bookDetailHide(
+                    versionCode = versionCode,
+                    isNeedHideCqzs = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "出圈指数"
+                    ),
+                    isNeedHideRybq = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "荣誉标签"
+                    ),
+                    isNeedHideQqGroups = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "QQ群"
+                    ),
+                    isNeedHideSyq = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "书友圈"
+                    ),
+                    isNeedHideSyb = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "书友榜"
+                    ),
+                    isNeedHideYpjz = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "月票金主"
+                    ),
+                    isNeedHideCenterAd = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "本书看点|中心广告"
+                    ),
+                    isNeedHideFloatAd = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "浮窗广告"
+                    ),
+                    isNeedHideBookRecommend = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "同类作品推荐"
+                    ),
+                    isNeedHideBookRecommend2 = optionEntity.viewHideOption.bookDetailOptions.isSelectedByTitle(
+                        "看过此书的人还看过"
+                    )
                 )
+            }
+        }
+
+        trackFeature(HookFeatures.ReadingPageChapter) {
+            readingPageChapterCorrelation(
+                versionCode = versionCode,
+                enableShowReaderPageChapterSaveRawPictures = optionEntity.readPageOption.enableShowReaderPageChapterSaveRawPicture,
+                enableShowReaderPageChapterSavePictureDialog = optionEntity.readPageOption.enableShowReaderPageChapterSavePictureDialog,
+                enableShowReaderPageChapterSaveAudioDialog = optionEntity.readPageOption.enableShowReaderPageChapterSaveAudioDialog,
+                enableCopyReaderPageChapterComment = optionEntity.readPageOption.enableCopyReaderPageChapterComment,
+                bridge = bridge
             )
         }
 
-        readingPageChapterCorrelation(
-            versionCode = versionCode,
-            enableShowReaderPageChapterSaveRawPictures = optionEntity.readPageOption.enableShowReaderPageChapterSaveRawPicture,
-            enableShowReaderPageChapterSavePictureDialog = optionEntity.readPageOption.enableShowReaderPageChapterSavePictureDialog,
-            enableShowReaderPageChapterSaveAudioDialog = optionEntity.readPageOption.enableShowReaderPageChapterSaveAudioDialog,
-            enableCopyReaderPageChapterComment = optionEntity.readPageOption.enableCopyReaderPageChapterComment,
-            bridge = bridge
-        )
-
         if (optionEntity.viewHideOption.enableHideLastPage) {
-            readBookLastPage(
-                versionCode = versionCode,
-                shieldAlsoRead = optionEntity.shieldOption.configurations.isSelectedByTitle("阅读-最后一页-看过此书的人还看过"),
-                shieldSimilarRecommend = optionEntity.shieldOption.configurations.isSelectedByTitle(
-                    "阅读-最后一页-同类作品推荐"
-                ),
-                shieldRecommendation = optionEntity.shieldOption.configurations.isSelectedByTitle("阅读-最后一页-推荐"),
-                hideCircle = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "书友圈"
-                ),
-                hideAlsoRead = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "看过此书的人还看过"
-                ),
-                hideRecommendation = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "推荐"
-                ),
-                hideSimilarRecommend = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "同类作品推荐"
-                ),
-                hideBookList = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "收录此书的书单"
-                ),
-                hideTryRead = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
-                    "试读"
-                ),
-                hideAdView = optionEntity.advOption.isSelectedByTitle("阅读页-最后一页-中间广告")
-            )
+            trackFeature(HookFeatures.ReadBookLastPage) {
+                readBookLastPage(
+                    versionCode = versionCode,
+                    shieldAlsoRead = optionEntity.shieldOption.configurations.isSelectedByTitle("阅读-最后一页-看过此书的人还看过"),
+                    shieldSimilarRecommend = optionEntity.shieldOption.configurations.isSelectedByTitle(
+                        "阅读-最后一页-同类作品推荐"
+                    ),
+                    shieldRecommendation = optionEntity.shieldOption.configurations.isSelectedByTitle("阅读-最后一页-推荐"),
+                    hideCircle = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "书友圈"
+                    ),
+                    hideAlsoRead = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "看过此书的人还看过"
+                    ),
+                    hideRecommendation = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "推荐"
+                    ),
+                    hideSimilarRecommend = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "同类作品推荐"
+                    ),
+                    hideBookList = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "收录此书的书单"
+                    ),
+                    hideTryRead = optionEntity.viewHideOption.bookLastPageOptions.isSelectedByTitle(
+                        "试读"
+                    ),
+                    hideAdView = optionEntity.advOption.isSelectedByTitle("阅读页-最后一页-中间广告")
+                )
+            }
         }
 
         if (optionEntity.viewHideOption.readPageOptions.enableCaptureBookReadPageView) {
-            hideReadPage(versionCode, bridge)
+            trackFeature(HookFeatures.HideReadPage) {
+                hideReadPage(versionCode, bridge)
+            }
         }
 
         if (optionEntity.startImageOption.enableCustomStartImage) {
-            customStartImage(versionCode)
+            trackFeature(HookFeatures.CustomStartImage) {
+                customStartImage(versionCode)
+            }
         }
 
         if (optionEntity.startImageOption.enableCaptureTheOfficialLaunchMapList) {
-            captureTheOfficialLaunchMapList(versionCode)
+            trackFeature(HookFeatures.CaptureOfficialLaunchMapList) {
+                captureTheOfficialLaunchMapList(versionCode)
+            }
         }
 
         if (optionEntity.bookshelfOption.enableCustomBookShelfTopImage) {
-            customBookShelfTopImage(versionCode)
+            trackFeature(HookFeatures.CustomBookShelfTopImage) {
+                customBookShelfTopImage(versionCode)
+            }
         }
 
         shieldOption(versionCode, optionEntity.shieldOption.configurations, bridge)
 
         if (optionEntity.shieldOption.enableQuickShieldDialog) {
-            quickShield(versionCode)
+            trackFeature(HookFeatures.QuickShield) {
+                quickShield(versionCode)
+            }
         }
 
         automatizationOption(
@@ -310,7 +367,15 @@ class HookEntry : IYukiHookXposedInit {
             optionEntity.mainOption.packageName.ifBlank { "com.qidian.QDReader" }
         }
 
-        val versionCode by lazy { getSystemContext().getVersionCode(QD_PACKAGE_NAME) }
+        val actualVersionCode by lazy { getSystemContext().getVersionCode(QD_PACKAGE_NAME) }
+        val versionCode by lazy {
+            when {
+                actualVersionCode <= 0 -> 1299
+                actualVersionCode < 1196 -> 1196
+                actualVersionCode > 1299 -> 1299
+                else -> actualVersionCode
+            }
+        }
 
     }
 

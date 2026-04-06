@@ -32,19 +32,19 @@ fun PackageParam.shieldOption(
 ) {
     configurations.filter { it.selected }.takeIf { it.isNotEmpty() }?.forEach { selected ->
         when (selected.title) {
-            "精选-主页面" -> shieldMainPage(versionCode)
-            "精选-分类" -> shieldCategory(versionCode, bridge)
-            "精选-分类-全部作品" -> shieldCategoryAllBook(versionCode, bridge)
-            "精选-免费-免费推荐" -> shieldFreeRecommend(versionCode, bridge)
-            "精选-免费-新书入库" -> shieldFreeNewBook(versionCode)
-            "精选-畅销精选、主编力荐等更多" -> shieldHotAndRecommend(versionCode, bridge)
-            "精选-新书强推、三江推荐" -> shieldNewBookAndRecommend(versionCode, bridge)
-            "精选-排行榜" -> shieldBookRank(versionCode)
-            "精选-新书" -> shieldNewBook(versionCode)
-            "每日导读" -> shieldDailyReading(versionCode, bridge)
-            "分类-小编力荐、本周强推等更多" -> shieldCategoryBookListReborn(versionCode)
-            "精选-漫画" -> shieldComic(versionCode)
-            "精选-漫画-其他" -> shieldComicOther(versionCode, bridge)
+            "精选-主页面" -> trackSelectedFeature("shield", selected.title) { shieldMainPage(versionCode) }
+            "精选-分类" -> trackSelectedFeature("shield", selected.title) { shieldCategory(versionCode, bridge) }
+            "精选-分类-全部作品" -> trackSelectedFeature("shield", selected.title) { shieldCategoryAllBook(versionCode, bridge) }
+            "精选-免费-免费推荐" -> trackSelectedFeature("shield", selected.title) { shieldFreeRecommend(versionCode, bridge) }
+            "精选-免费-新书入库" -> trackSelectedFeature("shield", selected.title) { shieldFreeNewBook(versionCode) }
+            "精选-畅销精选、主编力荐等更多" -> trackSelectedFeature("shield", selected.title) { shieldHotAndRecommend(versionCode, bridge) }
+            "精选-新书强推、三江推荐" -> trackSelectedFeature("shield", selected.title) { shieldNewBookAndRecommend(versionCode, bridge) }
+            "精选-排行榜" -> trackSelectedFeature("shield", selected.title) { shieldBookRank(versionCode) }
+            "精选-新书" -> trackSelectedFeature("shield", selected.title) { shieldNewBook(versionCode) }
+            "每日导读" -> trackSelectedFeature("shield", selected.title) { shieldDailyReading(versionCode, bridge) }
+            "分类-小编力荐、本周强推等更多" -> trackSelectedFeature("shield", selected.title) { shieldCategoryBookListReborn(versionCode) }
+            "精选-漫画" -> trackSelectedFeature("shield", selected.title) { shieldComic(versionCode) }
+            "精选-漫画-其他" -> trackSelectedFeature("shield", selected.title) { shieldComicOther(versionCode, bridge) }
         }
     }
 }

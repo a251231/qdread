@@ -21,30 +21,41 @@ fun PackageParam.advOption(
 ) {
     configurations.filter { it.selected }.takeIf { it.isNotEmpty() }?.forEach { selected ->
         when (selected.title) {
-            "闪屏广告" -> disableSplashAd(versionCode, bridge)
-            "GDT广告" -> disableGDTAD(versionCode, bridge)
-            "主页-每日阅读广告" -> disableDailyReadAd(versionCode)
-            "主页-书架活动弹框" -> disableBookshelfActivityPopup(versionCode)
-            "主页-书架顶部广告" ->   disableBookshelfTopAd(versionCode)
-            "主页-书架浮窗活动" -> disableBookshelfFloatWindow(versionCode)
-            "主页-书架底部导航栏广告" -> disableBottomNavigationCenterAd(versionCode)
-            "我-中间广告" -> disableAccountCenterAd(versionCode)
-            "阅读页-浮窗广告" -> disableReaderPageFloatAd(versionCode)
-            "阅读页-打赏小剧场" -> disableReadPageRewardTheater(versionCode)
-            "阅读页-章末底部月票打赏红包" -> disableReaderPageBottom(versionCode)
-            "阅读页-最后一页-弹框广告" -> disableReadPageNewestPageWindowBannerAd(versionCode)
+            "闪屏广告" -> trackSelectedFeature("adv", selected.title) { disableSplashAd(versionCode, bridge) }
+            "GDT广告" -> trackSelectedFeature("adv", selected.title) { disableGDTAD(versionCode, bridge) }
+            "主页-每日阅读广告" -> trackSelectedFeature("adv", selected.title) { disableDailyReadAd(versionCode) }
+            "主页-书架活动弹框" -> trackSelectedFeature("adv", selected.title) { disableBookshelfActivityPopup(versionCode) }
+            "主页-书架顶部广告" -> trackSelectedFeature("adv", selected.title) { disableBookshelfTopAd(versionCode) }
+            "主页-书架浮窗活动" -> trackSelectedFeature("adv", selected.title) { disableBookshelfFloatWindow(versionCode) }
+            "主页-书架底部导航栏广告" -> trackSelectedFeature("adv", selected.title) { disableBottomNavigationCenterAd(versionCode) }
+            "我-中间广告" -> trackSelectedFeature("adv", selected.title) { disableAccountCenterAd(versionCode) }
+            "阅读页-浮窗广告" -> trackSelectedFeature("adv", selected.title) { disableReaderPageFloatAd(versionCode) }
+            "阅读页-打赏小剧场" -> trackSelectedFeature("adv", selected.title) { disableReadPageRewardTheater(versionCode) }
+            "阅读页-章末底部月票打赏红包" -> trackSelectedFeature("adv", selected.title) { disableReaderPageBottom(versionCode) }
+            "阅读页-最后一页-弹框广告" -> trackSelectedFeature("adv", selected.title) { disableReadPageNewestPageWindowBannerAd(versionCode) }
         }
     }
 
-    disableReadPageChapterEnd(
-        versionCode,
-        disableAll = configurations.isSelectedByTitle("阅读页-章末一刀切"),
-        disableBookRecommend = configurations.isSelectedByTitle("阅读页-章末新人推书"),
-        disableBookComment = configurations.isSelectedByTitle("阅读页-章末本章说"),
-        disableChapterEndWelfare = configurations.isSelectedByTitle("阅读页-章末福利"),
-        disableChapterEndRewardAd = configurations.isSelectedByTitle("阅读页-章末广告"),
-        disableVoteTicketSpecialLine = configurations.isSelectedByTitle("阅读页-章末求票")
-    )
+    if (
+        configurations.isSelectedByTitle("阅读页-章末一刀切") ||
+        configurations.isSelectedByTitle("阅读页-章末新人推书") ||
+        configurations.isSelectedByTitle("阅读页-章末本章说") ||
+        configurations.isSelectedByTitle("阅读页-章末福利") ||
+        configurations.isSelectedByTitle("阅读页-章末广告") ||
+        configurations.isSelectedByTitle("阅读页-章末求票")
+    ) {
+        trackFeature(HookFeatures.ChapterEndAd) {
+            disableReadPageChapterEnd(
+                versionCode,
+                disableAll = configurations.isSelectedByTitle("阅读页-章末一刀切"),
+                disableBookRecommend = configurations.isSelectedByTitle("阅读页-章末新人推书"),
+                disableBookComment = configurations.isSelectedByTitle("阅读页-章末本章说"),
+                disableChapterEndWelfare = configurations.isSelectedByTitle("阅读页-章末福利"),
+                disableChapterEndRewardAd = configurations.isSelectedByTitle("阅读页-章末广告"),
+                disableVoteTicketSpecialLine = configurations.isSelectedByTitle("阅读页-章末求票")
+            )
+        }
+    }
 }
 
 /**

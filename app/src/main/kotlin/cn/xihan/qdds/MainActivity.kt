@@ -1115,6 +1115,10 @@ class MainActivity : ModuleAppCompatActivity() {
                 modifier = itemModifier
             )
 
+            CompatibilityDiagnosticCard(
+                versionCode = versionCode,
+                modifier = Modifier.padding(top = 8.dp)
+            )
 
         }
 
@@ -1274,6 +1278,81 @@ private fun PrimaryCard(
             }
             content()
         })
+}
+
+@Composable
+private fun CompatibilityDiagnosticCard(
+    versionCode: Int,
+    modifier: Modifier = Modifier,
+) {
+    val diagnostics = HookDiagnostics.diagnostics
+    val hookedCount = diagnostics.count { it.status == HookStatus.Hooked }
+    val missingCount = diagnostics.count { it.status == HookStatus.MissingSymbol }
+    val failedCount = diagnostics.count { it.status == HookStatus.Failed }
+    val pendingCount = diagnostics.count { it.status == HookStatus.Pending }
+    val visibleIssues = diagnostics.filter { it.status != HookStatus.Hooked }
+
+    PrimaryCard(title = "兼容性诊断", modifier = modifier) {
+        Column(modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) {
+            Text(
+                text = "起点内部版本号: $versionCode\nLSPosed API 最低要求: ${HookDiagnostics.MIN_API_VERSION}+",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "已命中: $hookedCount  未命中: $missingCount  失败: $failedCount  待执行: $pendingCount",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (!HookDiagnostics.sessionActive) {
+                Text(
+                    text = "当前进程尚未采集到运行期 Hook 诊断，请从起点应用内打开模块设置后再查看。",
+                    color = MaterialTheme.colorScheme.error
+                )
+                return@Column
+            }
+            if (visibleIssues.isEmpty()) {
+                Text(
+                    text = if (diagnostics.isEmpty()) {
+                        "当前没有可展示的运行期诊断数据。"
+                    } else {
+                        "当前已采集到的功能均已成功注册。"
+                    }
+                )
+                return@Column
+            }
+            visibleIssues.forEach { diagnostic ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "${diagnostic.featureId.displayName} [${diagnostic.status.toStatusLabel()}]",
+                    color = diagnostic.status.toStatusColor()
+                )
+                if (diagnostic.reason.isNotBlank()) {
+                    Text(
+                        text = diagnostic.reason,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HookStatus.toStatusColor(): Color = when (this) {
+    HookStatus.Pending -> Color(0xFFB26A00)
+    HookStatus.Hooked -> Color(0xFF1B8F3A)
+    HookStatus.MissingSymbol -> Color(0xFFD87A00)
+    HookStatus.Failed -> MaterialTheme.colorScheme.error
+}
+
+private fun HookStatus.toStatusLabel(): String = when (this) {
+    HookStatus.Pending -> "待执行"
+    HookStatus.Hooked -> "已命中"
+    HookStatus.MissingSymbol -> "未命中"
+    HookStatus.Failed -> "失败"
 }
 
 @OptIn(ExperimentalFoundationApi::class)

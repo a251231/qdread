@@ -18,24 +18,22 @@ import java.lang.reflect.Modifier
 fun PackageParam.interceptOption(
     versionCode: Int, configurations: List<SelectedModel>, bridge: DexKitBridge
 ) {
-    val interceptList = mutableListOf<String>()
     configurations.filter { it.selected }.takeIf { it.isNotEmpty() }?.forEach { selected ->
         when (selected.title) {
-            "检测更新" -> interceptCheckUpdate(versionCode, bridge)
-            "隐私政策更新弹框" -> interceptPrivacyPolicy(versionCode)
-            "同意隐私政策弹框" -> interceptAgreePrivacyPolicy(versionCode, bridge)
-            "WebSocket" -> interceptWebSocket(versionCode, bridge)
-            "青少年模式请求" -> interceptQSNModeRequest(versionCode)
-            "青少年模式弹框" -> interceptQSNYDialog(versionCode, bridge)
-            "阅读页水印" -> interceptReaderBookPageWaterMark(versionCode)
-            "发帖图片水印" -> interceptPostImageWatermark(versionCode)
-            "自动跳转精选" -> interceptAutoJumpSelected(versionCode)
-            "首次安装分析" -> interceptFirstInstallAnalytics(versionCode)
-            else -> interceptList += selected.title
+            "检测更新" -> trackSelectedFeature("intercept", selected.title) { interceptCheckUpdate(versionCode, bridge) }
+            "隐私政策更新弹框" -> trackSelectedFeature("intercept", selected.title) { interceptPrivacyPolicy(versionCode) }
+            "同意隐私政策弹框" -> trackSelectedFeature("intercept", selected.title) { interceptAgreePrivacyPolicy(versionCode, bridge) }
+            "WebSocket" -> trackSelectedFeature("intercept", selected.title) { interceptWebSocket(versionCode, bridge) }
+            "青少年模式请求" -> trackSelectedFeature("intercept", selected.title) { interceptQSNModeRequest(versionCode) }
+            "青少年模式弹框" -> trackSelectedFeature("intercept", selected.title) { interceptQSNYDialog(versionCode, bridge) }
+            "阅读页水印" -> trackSelectedFeature("intercept", selected.title) { interceptReaderBookPageWaterMark(versionCode) }
+            "发帖图片水印" -> trackSelectedFeature("intercept", selected.title) { interceptPostImageWatermark(versionCode) }
+            "自动跳转精选" -> trackSelectedFeature("intercept", selected.title) { interceptAutoJumpSelected(versionCode) }
+            "首次安装分析" -> trackSelectedFeature("intercept", selected.title) { interceptFirstInstallAnalytics(versionCode) }
+            else -> trackSelectedFeature("intercept", selected.title) {
+                interceptAsyncInitTask(versionCode, listOf(selected.title))
+            }
         }
-    }
-    if (interceptList.isNotEmpty()) {
-        interceptAsyncInitTask(versionCode, interceptList)
     }
 }
 

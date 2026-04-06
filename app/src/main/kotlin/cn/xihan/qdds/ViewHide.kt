@@ -34,10 +34,10 @@ fun PackageParam.homeOption(
 ) {
     configurations.filter { it.selected }.takeIf { it.isNotEmpty() }?.forEach {
         when (it.title) {
-            "主页顶部宝箱提示" -> hideMainTopBox(versionCode)
-            "主页顶部战力提示" -> hideMainTopPower(versionCode)
-            "书架每日导读" -> hideBookshelfDailyReading(versionCode, bridge)
-            "书架顶部标题" -> hideBookshelfTopTitle(versionCode)
+            "主页顶部宝箱提示" -> trackSelectedFeature("home", it.title) { hideMainTopBox(versionCode) }
+            "主页顶部战力提示" -> trackSelectedFeature("home", it.title) { hideMainTopPower(versionCode) }
+            "书架每日导读" -> trackSelectedFeature("home", it.title) { hideBookshelfDailyReading(versionCode, bridge) }
+            "书架顶部标题" -> trackSelectedFeature("home", it.title) { hideBookshelfTopTitle(versionCode) }
         }
     }
 }

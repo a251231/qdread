@@ -26,9 +26,9 @@ fun PackageParam.automatizationOption(
 ) {
     configurations.filter { it.selected }.takeIf { it.isNotEmpty() }?.forEach { selected ->
         when (selected.title) {
-            "自动签到" -> autoSignIn(versionCode)
-            "自动领取阅读积分" -> receiveReadingCreditsAutomatically(versionCode)
-            "自动领取章末红包" -> receivedReadingPageEndHongBaoAutomatically(versionCode)
+            "自动签到" -> trackSelectedFeature("automatization", selected.title) { autoSignIn(versionCode) }
+            "自动领取阅读积分" -> trackSelectedFeature("automatization", selected.title) { receiveReadingCreditsAutomatically(versionCode) }
+            "自动领取章末红包" -> trackSelectedFeature("automatization", selected.title) { receivedReadingPageEndHongBaoAutomatically(versionCode) }
 //            "自动跳过启动页" -> autoSkipSplash(versionCode)
         }
     }
