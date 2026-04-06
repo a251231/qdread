@@ -1,6 +1,7 @@
 package com.highcapable.yukihookapi.hook.factory
 
 import android.app.Activity
+import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.HookCompatRuntime
 import com.highcapable.yukihookapi.hook.param.HookParam
 import java.lang.reflect.Constructor
@@ -255,7 +256,15 @@ class HookRegistrationBuilder internal constructor(
         val delegates = executables.map { executable ->
             executable.isAccessible = true
             module.hook(executable).intercept { chain ->
-                block(chain, executable)
+                runCatching {
+                    block(chain, executable)
+                }.getOrElse { throwable ->
+                    YLog.error(
+                        msg = "hook callback failed: ${memberSignature(executable)} -> ${throwable.message}",
+                        tag = YLog.Configs.tag
+                    )
+                    chainProceed(chain, chainArgs(chain))
+                }
             }
         }
         return HookHandle(delegates)
@@ -283,7 +292,15 @@ private fun chainProceed(chain: Any, args: List<Any?>): Any? {
         ?: error("Cannot find proceed() on modern chain ${chain::class.java.name}")
     return when (proceed.parameterCount) {
         0 -> proceed.invoke(chain)
-        else -> proceed.invoke(chain, args.toTypedArray())
+        else -> {
+            val parameterType = proceed.parameterTypes.firstOrNull()
+            when {
+                parameterType == null -> proceed.invoke(chain)
+                List::class.java.isAssignableFrom(parameterType) -> proceed.invoke(chain, args)
+                parameterType.isArray -> proceed.invoke(chain, args.toTypedArray())
+                else -> proceed.invoke(chain, args)
+            }
+        }
     }
 }
 

@@ -127,7 +127,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ModuleAppCompatActivity() {
 
-    val versionCode by lazy { getVersionCode(HookEntry.QD_PACKAGE_NAME) }
+    val versionCode by lazy { getVersionCode(Option.targetPackageName()) }
 
     override val moduleTheme =
         com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar
@@ -1113,11 +1113,6 @@ class MainActivity : ModuleAppCompatActivity() {
             ItemWithNewPage(
                 text = "起点内部版本号: $versionCode\n模块版本: ${BuildConfig.VERSION_NAME}-${BuildConfig.VERSION_CODE}",
                 modifier = itemModifier
-            )
-
-            CompatibilityDiagnosticCard(
-                versionCode = versionCode,
-                modifier = Modifier.padding(top = 8.dp)
             )
 
         }

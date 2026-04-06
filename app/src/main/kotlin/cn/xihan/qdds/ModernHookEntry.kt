@@ -41,7 +41,6 @@ class ModernHookEntry : XposedModule() {
         )
 
         trackHookFeature(modernBootstrapFeature) {
-            installHooks(packageName = param.packageName, classLoader = param.classLoader)
             installApplicationBootstrap(packageName = param.packageName)
         }
     }
@@ -67,6 +66,11 @@ class ModernHookEntry : XposedModule() {
         hookAfter(attachMethod) { _, args, _ ->
             val context = args.firstOrNull().safeCast<Context>() ?: return@hookAfter
             if (context.packageName != packageName) return@hookAfter
+            val currentProcessName = runCatching { Application.getProcessName() }.getOrNull()
+            if (currentProcessName != null && currentProcessName != packageName) {
+                log(Log.INFO, TAG, "skip non-main process: $currentProcessName")
+                return@hookAfter
+            }
 
             runCatching {
                 val packageParam = PackageParam(
@@ -79,6 +83,10 @@ class ModernHookEntry : XposedModule() {
                 HookCompatRuntime.applicationContext = context
                 HookCompatRuntime.packageParam = packageParam
                 Option.initialize(context)
+                installHooks(
+                    packageName = packageName,
+                    classLoader = context.classLoader ?: HookCompatRuntime.currentClassLoader()
+                )
                 HookDiagnostics.beginSession(
                     packageName = packageName,
                     versionCode = context.getVersionCode(packageName),
@@ -104,7 +112,7 @@ class ModernHookEntry : XposedModule() {
     }
 
     private fun qdPackageName(): String =
-        Option.optionEntity.mainOption.packageName.ifBlank { "com.qidian.QDReader" }
+        Option.targetPackageName()
 
     companion object {
         private const val TAG = "QDReadHookModern"

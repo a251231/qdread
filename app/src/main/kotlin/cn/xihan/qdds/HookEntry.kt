@@ -42,8 +42,12 @@ import java.lang.reflect.Modifier
 class HookEntry : IYukiHookXposedInit {
 
     init {
-        if (optionEntity.allowDisclaimers) {
-            System.loadLibrary("dexkit")
+        if (Option.shouldEnableHooks()) {
+            runCatching {
+                System.loadLibrary("dexkit")
+            }.onFailure {
+                YLog.error(msg = "load dexkit failed: ${it.message}", tag = YLog.Configs.tag)
+            }
         }
     }
 
@@ -55,7 +59,7 @@ class HookEntry : IYukiHookXposedInit {
     }
 
     override fun onHook() = YukiHookAPI.encase {
-        if ("com.qidian.QDReader" !in packageName) return@encase
+        if (packageName != QD_PACKAGE_NAME) return@encase
         loadApp(name = packageName) {
             HookDiagnostics.beginSession(
                 packageName = packageName,
@@ -367,19 +371,20 @@ class HookEntry : IYukiHookXposedInit {
     }
 
     companion object {
-        val QD_PACKAGE_NAME by lazy {
-            optionEntity.mainOption.packageName.ifBlank { "com.qidian.QDReader" }
-        }
+        val QD_PACKAGE_NAME: String
+            get() = Option.targetPackageName()
 
-        val actualVersionCode by lazy { getSystemContext().getVersionCode(QD_PACKAGE_NAME) }
-        val versionCode by lazy {
+        val actualVersionCode: Int
+            get() = getSystemContext().getVersionCode(QD_PACKAGE_NAME)
+
+        val versionCode: Int
+            get() =
             when {
                 actualVersionCode <= 0 -> 1299
                 actualVersionCode < 1196 -> 1196
                 actualVersionCode > 1299 -> 1299
                 else -> actualVersionCode
             }
-        }
 
     }
 

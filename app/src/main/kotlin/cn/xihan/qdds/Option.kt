@@ -97,18 +97,24 @@ fun provideOptionEntity(file: File): OptionEntity = try {
 
 object Option {
 
+    const val DEFAULT_QD_PACKAGE_NAME = "com.qidian.QDReader"
+
     lateinit var context: WeakReference<Context>
 
-    val optionFile by lazy {
-        provideOptionFile()
+    val optionFile by lazy<File?> {
+        runCatching { provideOptionFile() }
+            .onFailure { it.loge() }
+            .getOrNull()
     }
 
-    val logFile by lazy {
-        provideLogFile()
+    val logFile by lazy<File?> {
+        runCatching { provideLogFile() }
+            .onFailure { it.loge() }
+            .getOrNull()
     }
 
     val optionEntity by lazy {
-        provideOptionEntity(optionFile)
+        optionFile?.let(::provideOptionEntity) ?: OptionEntity()
     }
 
     /**
@@ -161,10 +167,17 @@ object Option {
 
     fun initialize(context: Context) {
         this.context = WeakReference(context)
-        if (optionEntity.readPageOption.enableCustomFont) {
+        if (runCatching { optionEntity.readPageOption.enableCustomFont }.getOrDefault(false)) {
             moveToPrivateStorage(context)
         }
     }
+
+    fun targetPackageName(): String =
+        runCatching { optionEntity.mainOption.packageName.ifBlank { DEFAULT_QD_PACKAGE_NAME } }
+            .getOrDefault(DEFAULT_QD_PACKAGE_NAME)
+
+    fun shouldEnableHooks(): Boolean =
+        runCatching { optionEntity.allowDisclaimers }.getOrDefault(false)
 
     /**
      * 需要屏蔽的作者列表
@@ -386,12 +399,15 @@ object Option {
      * @return [Boolean]
      * @suppress Generate Documentation
      */
-    fun updateOptionEntity(): Boolean = try {
-        optionFile.writeText(optionEntity.toJSONString())
-        true
-    } catch (e: Throwable) {
-        e.loge()
-        false
+    fun updateOptionEntity(): Boolean {
+        val file = optionFile ?: return false
+        return try {
+            file.writeText(optionEntity.toJSONString())
+            true
+        } catch (e: Throwable) {
+            e.loge()
+            false
+        }
     }
 
     /**
@@ -399,12 +415,15 @@ object Option {
      * @return [Boolean]
      * @suppress Generate Documentation
      */
-    fun resetOptionEntity(): Boolean = try {
-        optionFile.writeText(OptionEntity().toJSONString())
-        true
-    } catch (e: Throwable) {
-        (e.message ?: "重置配置文件失败").loge()
-        false
+    fun resetOptionEntity(): Boolean {
+        val file = optionFile ?: return false
+        return try {
+            file.writeText(OptionEntity().toJSONString())
+            true
+        } catch (e: Throwable) {
+            (e.message ?: "重置配置文件失败").loge()
+            false
+        }
     }
 
     /**
@@ -468,10 +487,12 @@ object Option {
     /**
      * 将文本写入到文件末尾
      */
-    fun String.writeTextFile() = logFile.appendText("\n$this")
+    fun String.writeTextFile() {
+        logFile?.appendText("\n$this")
+    }
 
     fun cleanLog(context: Context) {
-        logFile.writeText("")
+        logFile?.writeText("")
         context.toast("日志已清空")
     }
 
