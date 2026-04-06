@@ -39,7 +39,6 @@ import com.highcapable.yukihookapi.hook.type.java.ListClass
 import com.highcapable.yukihookapi.hook.type.java.UnitType
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
-import de.robv.android.xposed.XposedHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -134,6 +133,24 @@ fun Throwable.loge() {
  */
 inline fun <reified T> Any?.safeCast(): T? = this as? T
 
+fun findDeclaredField(clazz: Class<*>, name: String): java.lang.reflect.Field? =
+    generateSequence(clazz) { it.superclass }
+        .firstNotNullOfOrNull { current ->
+            runCatching { current.getDeclaredField(name).apply { isAccessible = true } }.getOrNull()
+        }
+
+fun invokeDeclaredMethod(target: Any?, name: String, vararg args: Any?): Any? {
+    val clazz = target?.javaClass ?: return null
+    val methods = generateSequence(clazz) { it.superclass }
+        .flatMap { it.declaredMethods.asSequence() }
+        .filter { it.name == name && it.parameterCount == args.size }
+        .toList()
+    val method = methods.firstOrNull()
+        ?: error("Cannot find method $name(${args.size}) on ${clazz.name}")
+    method.isAccessible = true
+    return method.invoke(target, *args)
+}
+
 /**
  * 按 ID 查找视图
  * @param [id] 编号
@@ -143,7 +160,7 @@ inline fun <reified T> Any?.safeCast(): T? = this as? T
  */
 @Throws(NoSuchFieldException::class, IllegalAccessException::class)
 inline fun <reified T : View> Any.findViewById(id: Int): T? {
-    return XposedHelpers.callMethod(this, "findViewById", id).safeCast<T>()
+    return invokeDeclaredMethod(this, "findViewById", id).safeCast<T>()
 }
 
 /**
@@ -285,17 +302,9 @@ fun View.setVisibilityWithChildren(visibility: Int = View.GONE) {
  * @suppress Generate Documentation
  */
 fun Any.setParam(name: String, value: Any?) {
-    when (value) {
-        is Int -> XposedHelpers.setIntField(this, name, value)
-        is Boolean -> XposedHelpers.setBooleanField(this, name, value)
-        is String -> XposedHelpers.setObjectField(this, name, value)
-        is Long -> XposedHelpers.setLongField(this, name, value)
-        is Float -> XposedHelpers.setFloatField(this, name, value)
-        is Double -> XposedHelpers.setDoubleField(this, name, value)
-        is Short -> XposedHelpers.setShortField(this, name, value)
-        is Byte -> XposedHelpers.setByteField(this, name, value)
-        is Char -> XposedHelpers.setCharField(this, name, value)
-        else -> XposedHelpers.setObjectField(this, name, value)
+    findDeclaredField(javaClass, name)?.apply {
+        isAccessible = true
+        set(this@setParam, value)
     }
 }
 
@@ -317,10 +326,11 @@ fun Any.setParams(vararg params: Pair<String, Any?>) {
  * @suppress Generate Documentation
  */
 fun getSystemContext(): Context {
-    val activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", null)
-    val activityThread =
-        XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread")
-    val context = XposedHelpers.callMethod(activityThread, "getSystemContext").safeCast<Context>()
+    val activityThreadClass = Class.forName("android.app.ActivityThread")
+    val activityThread = activityThreadClass.getDeclaredMethod("currentActivityThread").apply {
+        isAccessible = true
+    }.invoke(null)
+    val context = invokeDeclaredMethod(activityThread, "getSystemContext").safeCast<Context>()
     return context ?: throw Error("Failed to get system context.")
 }
 

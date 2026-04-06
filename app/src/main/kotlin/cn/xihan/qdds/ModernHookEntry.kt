@@ -3,6 +3,8 @@ package cn.xihan.qdds
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.highcapable.yukihookapi.hook.param.HookCompatRuntime
+import com.highcapable.yukihookapi.hook.param.PackageParam
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -16,6 +18,7 @@ private val modernBootstrapFeature = HookFeatureId.named(
 
 private object ModernHookState {
     val attachHookInstalled = AtomicBoolean(false)
+    val hookInstalled = AtomicBoolean(false)
 }
 
 class ModernHookEntry : XposedModule() {
@@ -38,8 +41,23 @@ class ModernHookEntry : XposedModule() {
         )
 
         trackHookFeature(modernBootstrapFeature) {
+            installHooks(packageName = param.packageName, classLoader = param.classLoader)
             installApplicationBootstrap(packageName = param.packageName)
         }
+    }
+
+    private fun installHooks(packageName: String, classLoader: ClassLoader) {
+        if (!ModernHookState.hookInstalled.compareAndSet(false, true)) return
+        val systemContext = getSystemContext()
+        val packageParam = PackageParam(
+            packageName = packageName,
+            classLoader = classLoader,
+            appInfo = systemContext.packageManager.getApplicationInfo(packageName, 0)
+        )
+        HookCompatRuntime.module = this
+        HookCompatRuntime.packageParam = packageParam
+        HookEntry().onInit()
+        HookEntry().onHook()
     }
 
     private fun installApplicationBootstrap(packageName: String) {
@@ -51,6 +69,15 @@ class ModernHookEntry : XposedModule() {
             if (context.packageName != packageName) return@hookAfter
 
             runCatching {
+                val packageParam = PackageParam(
+                    packageName = packageName,
+                    classLoader = context.javaClass.classLoader
+                        ?: HookCompatRuntime.currentClassLoader(),
+                    appInfo = context.applicationInfo
+                )
+                HookCompatRuntime.module = this
+                HookCompatRuntime.applicationContext = context
+                HookCompatRuntime.packageParam = packageParam
                 Option.initialize(context)
                 HookDiagnostics.beginSession(
                     packageName = packageName,

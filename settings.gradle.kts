@@ -23,11 +23,6 @@ dependencyResolutionManagement {
                 includeGroupByRegex("com\\.github.*")
             }
         }
-        maven("https://api.xposed.info/"){
-            mavenContent {
-                includeGroup("de.robv.android.xposed")
-            }
-        }
         maven("https://androidx.dev/storage/compose-compiler/repository/")
     }
 }

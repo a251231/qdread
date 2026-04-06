@@ -19,7 +19,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.jgit)
     alias(libs.plugins.dokka)
 }
@@ -145,10 +144,6 @@ dependencies {
     implementation(libs.dexkit)
     implementation(libs.xxpermissions)
 
-    implementation(libs.yukihook.api)
-    ksp(libs.yukihook.ksp)
-
-    compileOnly(libs.xposed.api)
     compileOnly(libs.libxposed.api)
 }
 

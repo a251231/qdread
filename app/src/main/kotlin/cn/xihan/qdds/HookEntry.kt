@@ -60,7 +60,7 @@ class HookEntry : IYukiHookXposedInit {
             HookDiagnostics.beginSession(
                 packageName = packageName,
                 versionCode = actualVersionCode,
-                mode = "legacy"
+                mode = "modern101"
             )
 
             onAppLifecycle {

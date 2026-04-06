@@ -1,8 +1,6 @@
 [versions]
 agp = "8.3.0"
 kotlin = "1.9.23"
-ksp = "1.9.23-1.0.19"
-yuki = "1.2.0"
 libxposed = "101.0.1"
 compose-compiler = "1.5.11"
 [libraries]
@@ -18,11 +16,7 @@ compose-material3 = { module = "androidx.compose.material3:material3", version =
 compose-coil = { module = "io.coil-kt:coil-compose", version = "2.6.0" }
 compose-navigation = { module = "androidx.navigation:navigation-compose", version = "2.7.7" }
 compose-lottie = { module = "com.airbnb.android:lottie-compose", version = "6.4.0" }
-xposed-api = { module = "de.robv.android.xposed:api", version = "82" }
 libxposed-api = { module = "io.github.libxposed:api", version.ref = "libxposed" }
-#https://github.com/HighCapable/YukiHookAPI
-yukihook-api = { module = "com.highcapable.yukihookapi:api", version.ref = "yuki" }
-yukihook-ksp = { module = "com.highcapable.yukihookapi:ksp-xposed", version.ref = "yuki" }
 #kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 #https://github.com/LuckyPray/DexKit
 dexkit = { module = "org.luckypray:dexkit", version = "2.0.0" }
@@ -33,5 +27,4 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 jgit = { id = "org.lsposed.lsplugin.jgit", version = "1.1" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 dokka = { id = "org.jetbrains.dokka", version = "1.9.20" }
