@@ -69,8 +69,6 @@ fun Class<*>.method(block: MethodRule.() -> Unit = {}): ExecutableSelector {
 fun Any.method(block: MethodRule.() -> Unit = {}): ExecutableSelector =
     javaClass.method(block).withDefaultTarget(this)
 
-fun Activity.registerModuleAppActivities() = Unit
-
 open class MemberRule {
     var includeSuperClass: Boolean = false
         private set
@@ -180,10 +178,14 @@ class BoundExecutable internal constructor(
     fun call(vararg args: Any?): Any? {
         executable.isAccessible = true
         return when (executable) {
-            is Method -> executable.invoke(
-                if (Modifier.isStatic(executable.modifiers)) null else target,
-                *args
-            )
+            is Method -> {
+                val resolvedTarget = if (Modifier.isStatic(executable.modifiers)) {
+                    null
+                } else {
+                    target ?: HookCompatRuntime.currentReceiver()
+                }
+                executable.invoke(resolvedTarget, *args)
+            }
 
             is Constructor<*> -> executable.newInstance(*args)
             else -> null
@@ -253,17 +255,27 @@ class HookRegistrationBuilder internal constructor(
         block: (chain: Any, executable: Executable) -> Any?,
     ): HookHandle {
         val module = HookCompatRuntime.requireModule()
+        val snapshot = HookCompatRuntime.snapshot()
         val delegates = executables.map { executable ->
             executable.isAccessible = true
+            YLog.info(
+                msg = "hook registered: ${memberSignature(executable)}",
+                tag = YLog.Configs.tag
+            )
             module.hook(executable).intercept { chain ->
-                runCatching {
-                    block(chain, executable)
-                }.getOrElse { throwable ->
-                    YLog.error(
-                        msg = "hook callback failed: ${memberSignature(executable)} -> ${throwable.message}",
-                        tag = YLog.Configs.tag
-                    )
-                    chainProceed(chain, chainArgs(chain))
+                HookCompatRuntime.withSnapshot(
+                    snapshot = snapshot,
+                    receiver = chainThisObject(chain)
+                ) {
+                    runCatching {
+                        block(chain, executable)
+                    }.getOrElse { throwable ->
+                        YLog.error(
+                            msg = "hook callback failed: ${memberSignature(executable)} -> ${throwable.message}",
+                            tag = YLog.Configs.tag
+                        )
+                        chainProceed(chain, chainArgs(chain))
+                    }
                 }
             }
         }
@@ -279,6 +291,7 @@ private fun chainArgs(chain: Any): MutableList<Any?> {
     return when (val value = getter?.invoke(chain)) {
         is MutableList<*> -> value as MutableList<Any?>
         is List<*> -> value.toMutableList() as MutableList<Any?>
+        is Array<*> -> value.toMutableList() as MutableList<Any?>
         else -> mutableListOf()
     }
 }

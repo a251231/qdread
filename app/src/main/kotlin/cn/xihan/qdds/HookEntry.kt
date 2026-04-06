@@ -13,7 +13,6 @@ import cn.xihan.qdds.Option.writeTextFile
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.method
-import com.highcapable.yukihookapi.hook.factory.registerModuleAppActivities
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
 import com.highcapable.yukihookapi.hook.type.android.BundleClass
@@ -103,15 +102,6 @@ class HookEntry : IYukiHookXposedInit {
                         true
                     }
                 }
-
-                method {
-                    name = "onCreate"
-                    param(BundleClass)
-                    returnType = UnitType
-                }.hook().after {
-                    instance<Activity>().registerModuleAppActivities()
-                }
-
             }
 
 //            findMethodAndPrint("a.c")

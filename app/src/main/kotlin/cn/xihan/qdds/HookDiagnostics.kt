@@ -31,6 +31,7 @@ data class HookFeatureId(
 data class HookDiagnostic(
     val featureId: HookFeatureId,
     val packageName: String,
+    val processName: String,
     val versionCode: Int,
     val status: HookStatus,
     val reason: String = "",
@@ -72,6 +73,8 @@ object HookDiagnostics {
 
     var sessionPackageName by mutableStateOf("")
         private set
+    var sessionProcessName by mutableStateOf("")
+        private set
     var sessionVersionCode by mutableStateOf(0)
         private set
     var sessionMode by mutableStateOf("legacy")
@@ -82,12 +85,23 @@ object HookDiagnostics {
         private set
 
     @Synchronized
-    fun beginSession(packageName: String, versionCode: Int, mode: String = sessionMode) {
-        if (sessionPackageName != packageName || sessionVersionCode != versionCode || !sessionActive) {
+    fun beginSession(
+        packageName: String,
+        versionCode: Int,
+        mode: String = sessionMode,
+        processName: String = sessionProcessName,
+    ) {
+        if (
+            sessionPackageName != packageName ||
+            sessionProcessName != processName ||
+            sessionVersionCode != versionCode ||
+            !sessionActive
+        ) {
             registry.clear()
             diagnostics = emptyList()
         }
         sessionPackageName = packageName
+        sessionProcessName = processName
         sessionVersionCode = versionCode
         sessionMode = mode
         sessionActive = true
@@ -119,6 +133,7 @@ object HookDiagnostics {
         registry[featureId.key] = HookDiagnostic(
             featureId = featureId,
             packageName = sessionPackageName,
+            processName = sessionProcessName,
             versionCode = sessionVersionCode,
             status = status,
             reason = reason,
