@@ -26,7 +26,10 @@ plugins {
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
-keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+val hasKeystoreProperties = keystorePropertiesFile.exists()
+if (hasKeystoreProperties) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
 
 val repo = jgit.repo()
 val commitCount = (repo?.commitCount("refs/remotes/origin/master") ?: 1) + 23
@@ -46,13 +49,15 @@ android {
     )
 
     signingConfigs {
-        create("xihantest") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-            enableV3Signing = true
-            enableV4Signing = true
+        if (hasKeystoreProperties) {
+            create("xihantest") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                enableV3Signing = true
+                enableV4Signing = true
+            }
         }
     }
 
@@ -68,7 +73,9 @@ android {
 
         buildConfigField("long", "BUILD_TIMESTAMP", "${System.currentTimeMillis()}L")
 
-        signingConfig = signingConfigs.getByName("xihantest")
+        if (hasKeystoreProperties) {
+            signingConfig = signingConfigs.getByName("xihantest")
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
