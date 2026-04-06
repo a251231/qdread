@@ -73,8 +73,10 @@ android {
 
         buildConfigField("long", "BUILD_TIMESTAMP", "${System.currentTimeMillis()}L")
 
-        if (hasKeystoreProperties) {
-            signingConfig = signingConfigs.getByName("xihantest")
+        signingConfig = if (hasKeystoreProperties) {
+            signingConfigs.getByName("xihantest")
+        } else {
+            signingConfigs.getByName("debug")
         }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -241,10 +243,11 @@ val synthesizeDistReleaseApksCI by tasks.registering {
         outputs.file(File(outputDir, outputName))
     }
     val signConfig = android.signingConfigs.findByName("xihantest")
+        ?: android.signingConfigs.findByName("debug")
     val minSdk = android.defaultConfig.minSdk!!
     doLast {
-        if (signConfig == null) {
-            logger.error("Task :app:synthesizeDistReleaseApksCI: No release signing config found, skip signing")
+        require(signConfig != null) {
+            "Task :app:synthesizeDistReleaseApksCI: No signing config found for CI packaging"
         }
         val requiredAbiList = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         outputDir.mkdir()
@@ -273,26 +276,24 @@ val synthesizeDistReleaseApksCI by tasks.registering {
                     outputApk.delete()
                 }
                 ZFiles.apk(outputApk, options).use { dstApk ->
-                    if (signConfig != null) {
-                        val keyStore =
-                            KeyStore.getInstance(signConfig.storeType ?: KeyStore.getDefaultType())
-                        FileInputStream(signConfig.storeFile!!).use {
-                            keyStore.load(it, signConfig.storePassword!!.toCharArray())
-                        }
-                        val protParam =
-                            KeyStore.PasswordProtection(signConfig.keyPassword!!.toCharArray())
-                        val keyEntry = keyStore.getEntry(signConfig.keyAlias!!, protParam)
-                        val privateKey = keyEntry as KeyStore.PrivateKeyEntry
-                        val signingOptions = SigningOptions.builder()
-                            .setMinSdkVersion(minSdk)
-                            .setV1SigningEnabled(minSdk < 24)
-                            .setV2SigningEnabled(true)
-                            .setKey(privateKey.privateKey)
-                            .setCertificates(privateKey.certificate as X509Certificate)
-                            .setValidation(SigningOptions.Validation.ASSUME_INVALID)
-                            .build()
-                        SigningExtension(signingOptions).register(dstApk)
+                    val keyStore =
+                        KeyStore.getInstance(signConfig.storeType ?: KeyStore.getDefaultType())
+                    FileInputStream(signConfig.storeFile!!).use {
+                        keyStore.load(it, signConfig.storePassword!!.toCharArray())
                     }
+                    val protParam =
+                        KeyStore.PasswordProtection(signConfig.keyPassword!!.toCharArray())
+                    val keyEntry = keyStore.getEntry(signConfig.keyAlias!!, protParam)
+                    val privateKey = keyEntry as KeyStore.PrivateKeyEntry
+                    val signingOptions = SigningOptions.builder()
+                        .setMinSdkVersion(minSdk)
+                        .setV1SigningEnabled(minSdk < 24)
+                        .setV2SigningEnabled(true)
+                        .setKey(privateKey.privateKey)
+                        .setCertificates(privateKey.certificate as X509Certificate)
+                        .setValidation(SigningOptions.Validation.ASSUME_INVALID)
+                        .build()
+                    SigningExtension(signingOptions).register(dstApk)
                     // add input apk to the output apk
                     srcApk.entries().forEach { entry ->
                         val cdh = entry.centralDirectoryHeader
