@@ -35,13 +35,30 @@ class ModernHookEntry : XposedModule() {
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
-        if (param.packageName != qdPackageName()) return
+        if (param.packageName != qdPackageName()) {
+            traceInjection(
+                stage = "onPackageReady",
+                status = InjectionStatus.Failed,
+                packageName = param.packageName,
+                processName = "pending",
+                versionCode = 0,
+                reason = "unexpected package: ${param.packageName}"
+            )
+            return
+        }
 
         HookDiagnostics.beginSession(
             packageName = param.packageName,
             versionCode = 0,
             mode = "modern101",
             processName = "pending"
+        )
+        traceInjection(
+            stage = "onPackageReady",
+            status = InjectionStatus.Succeeded,
+            packageName = param.packageName,
+            processName = "pending",
+            versionCode = 0
         )
 
         trackHookFeature(modernBootstrapFeature) {
@@ -79,6 +96,13 @@ class ModernHookEntry : XposedModule() {
             entry.configureLogging()
             entry.install(installedParam)
         }
+        traceInjection(
+            stage = "HookEntry.install",
+            status = InjectionStatus.Succeeded,
+            packageName = installedParam.packageName,
+            processName = installedParam.processName,
+            versionCode = context.getVersionCode(installedParam.packageName)
+        )
         log(Log.INFO, TAG, "modern hooks installed for $installKey")
     }
 
@@ -94,6 +118,14 @@ class ModernHookEntry : XposedModule() {
             if (context.packageName != packageName) return@hookAfter
             val currentProcessName = processName(context)
             if (currentProcessName != packageName) {
+                traceInjection(
+                    stage = "Application.attach",
+                    status = InjectionStatus.Skipped,
+                    packageName = packageName,
+                    processName = currentProcessName,
+                    versionCode = context.getVersionCode(packageName),
+                    reason = "skip non-main process"
+                )
                 log(Log.INFO, TAG, "skip non-main process: $currentProcessName")
                 return@hookAfter
             }
@@ -118,8 +150,23 @@ class ModernHookEntry : XposedModule() {
                     mode = "modern101",
                     processName = currentProcessName
                 )
+                traceInjection(
+                    stage = "Application.attach",
+                    status = InjectionStatus.Succeeded,
+                    packageName = packageName,
+                    processName = currentProcessName,
+                    versionCode = context.getVersionCode(packageName)
+                )
                 log(Log.INFO, TAG, "modern bootstrap attached for ${processKey(packageName, currentProcessName)}")
             }.onFailure {
+                traceInjection(
+                    stage = "Application.attach",
+                    status = InjectionStatus.Failed,
+                    packageName = packageName,
+                    processName = currentProcessName,
+                    versionCode = context.getVersionCode(packageName),
+                    reason = it.toDiagnosticReason()
+                )
                 HookDiagnostics.markThrowable(modernBootstrapFeature, it)
                 log(Log.ERROR, TAG, "modern bootstrap failed: ${it.message}")
             }
@@ -137,9 +184,29 @@ class ModernHookEntry : XposedModule() {
             val application = thisObject.safeCast<Application>() ?: return@hookAfter
             if (application.packageName != packageName) return@hookAfter
             val currentProcessName = processName(application)
-            if (currentProcessName != packageName) return@hookAfter
+            if (currentProcessName != packageName) {
+                traceInjection(
+                    stage = "Application.onCreate",
+                    status = InjectionStatus.Skipped,
+                    packageName = packageName,
+                    processName = currentProcessName,
+                    versionCode = application.getVersionCode(packageName),
+                    reason = "skip non-main process"
+                )
+                return@hookAfter
+            }
             val installKey = processKey(packageName, currentProcessName)
-            val packageParam = ModernHookState.packageParams[installKey] ?: return@hookAfter
+            val packageParam = ModernHookState.packageParams[installKey] ?: run {
+                traceInjection(
+                    stage = "Application.onCreate",
+                    status = InjectionStatus.Failed,
+                    packageName = packageName,
+                    processName = currentProcessName,
+                    versionCode = application.getVersionCode(packageName),
+                    reason = "missing package param for $installKey"
+                )
+                return@hookAfter
+            }
             HookCompatRuntime.withRuntime(
                 module = this,
                 packageParam = packageParam,
@@ -154,6 +221,13 @@ class ModernHookEntry : XposedModule() {
                     processName = currentProcessName
                 )
             }
+            traceInjection(
+                stage = "Application.onCreate",
+                status = InjectionStatus.Succeeded,
+                packageName = packageName,
+                processName = currentProcessName,
+                versionCode = application.getVersionCode(packageName)
+            )
             log(Log.INFO, TAG, "application onCreate dispatched for $installKey")
         }
     }
@@ -171,6 +245,41 @@ class ModernHookEntry : XposedModule() {
 
     private fun qdPackageName(): String =
         Option.targetPackageName()
+
+    private fun traceInjection(
+        stage: String,
+        status: InjectionStatus,
+        packageName: String,
+        processName: String,
+        versionCode: Int,
+        reason: String = "",
+    ) {
+        HookDiagnostics.recordInjection(
+            stage = stage,
+            status = status,
+            packageName = packageName,
+            processName = processName,
+            versionCode = versionCode,
+            reason = reason
+        )
+        val level = if (status == InjectionStatus.Failed) Log.ERROR else Log.INFO
+        val message = buildString {
+            append(stage)
+            append(" -> ")
+            append(status)
+            append(" @ ")
+            append(processKey(packageName, processName))
+            if (versionCode > 0) {
+                append(" v")
+                append(versionCode)
+            }
+            if (reason.isNotBlank()) {
+                append(" : ")
+                append(reason)
+            }
+        }
+        log(level, TAG, message)
+    }
 
     private fun processName(context: Context): String =
         runCatching { Application.getProcessName() }

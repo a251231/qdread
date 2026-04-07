@@ -56,6 +56,13 @@ class HookEntry {
     fun install(packageParam: PackageParam) = packageParam.withRuntime {
         if (packageName != QD_PACKAGE_NAME) return@withRuntime
         runCatching {
+            HookDiagnostics.recordInjection(
+                stage = "HookEntry.install",
+                status = InjectionStatus.Succeeded,
+                packageName = packageName,
+                processName = processName,
+                versionCode = actualVersionCode
+            )
             HookDiagnostics.beginSession(
                 packageName = packageName,
                 versionCode = actualVersionCode,
@@ -80,7 +87,8 @@ class HookEntry {
                 }
             }
 
-            "com.qidian.QDReader.ui.activity.MoreActivity".toClass().apply {
+            trackFeature(HookFeatures.ModuleSettingsEntry) {
+                "com.qidian.QDReader.ui.activity.MoreActivity".toClass().apply {
                 method {
                     name = "initWidget"
                     emptyParam()
@@ -98,6 +106,7 @@ class HookEntry {
                         true
                     }
                 }
+                }
             }
 
 //            findMethodAndPrint("a.c")
@@ -109,6 +118,14 @@ class HookEntry {
 //            findMethodAndPrint("uj.b")
 
         }.onFailure {
+            HookDiagnostics.recordInjection(
+                stage = "HookEntry.install",
+                status = InjectionStatus.Failed,
+                packageName = packageName,
+                processName = processName,
+                versionCode = actualVersionCode,
+                reason = it.toDiagnosticReason()
+            )
             YLog.error(msg = "install hook entry failed: ${it.message}", tag = YLog.Configs.tag)
             throw it
         }

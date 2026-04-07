@@ -98,6 +98,7 @@ fun provideOptionEntity(file: File): OptionEntity = try {
 object Option {
 
     const val DEFAULT_QD_PACKAGE_NAME = "com.qidian.QDReader"
+    const val FIXED_QD_PACKAGE_NAME = DEFAULT_QD_PACKAGE_NAME
 
     lateinit var context: WeakReference<Context>
 
@@ -172,9 +173,7 @@ object Option {
         }
     }
 
-    fun targetPackageName(): String =
-        runCatching { optionEntity.mainOption.packageName.ifBlank { DEFAULT_QD_PACKAGE_NAME } }
-            .getOrDefault(DEFAULT_QD_PACKAGE_NAME)
+    fun targetPackageName(): String = FIXED_QD_PACKAGE_NAME
 
     fun shouldEnableHooks(): Boolean =
         runCatching { optionEntity.allowDisclaimers }.getOrDefault(false)

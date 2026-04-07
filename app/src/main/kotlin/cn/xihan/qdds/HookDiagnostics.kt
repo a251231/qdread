@@ -1,16 +1,24 @@
 package cn.xihan.qdds
 
+import com.alibaba.fastjson2.JSON
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
+import java.io.File
 import java.security.MessageDigest
 
 enum class HookStatus {
     Pending,
     Hooked,
     MissingSymbol,
+    Failed,
+}
+
+enum class InjectionStatus {
+    Succeeded,
+    Skipped,
     Failed,
 }
 
@@ -38,7 +46,18 @@ data class HookDiagnostic(
     val updatedAt: Long = System.currentTimeMillis(),
 )
 
+data class InjectionDiagnostic(
+    val stage: String,
+    val packageName: String,
+    val processName: String,
+    val versionCode: Int,
+    val status: InjectionStatus,
+    val reason: String = "",
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
 object HookFeatures {
+    val ModuleSettingsEntry = HookFeatureId.named("main.module_settings_entry", "Module settings entry")
     val StartPermissions = HookFeatureId.named("main.start_permissions", "启动前权限检查")
     val PostImageUrl = HookFeatureId.named("main.post_image_url", "发帖显示图片直链")
     val UnlockMemberBackground = HookFeatureId.named("main.unlock_member_background", "解锁会员卡专属背景")
@@ -68,6 +87,7 @@ object HookFeatures {
 
 object HookDiagnostics {
     const val MIN_API_VERSION = 101
+    private const val INJECTION_STATUS_FILE_NAME = "hook_injection_status.json"
 
     private val registry = linkedMapOf<String, HookDiagnostic>()
 
@@ -82,6 +102,8 @@ object HookDiagnostics {
     var sessionActive by mutableStateOf(false)
         private set
     var diagnostics by mutableStateOf<List<HookDiagnostic>>(emptyList())
+        private set
+    var injectionStatus by mutableStateOf(loadInjectionDiagnostic())
         private set
 
     @Synchronized
@@ -129,6 +151,42 @@ object HookDiagnostics {
     }
 
     @Synchronized
+    fun recordInjection(
+        stage: String,
+        status: InjectionStatus,
+        packageName: String = sessionPackageName.ifBlank { Option.targetPackageName() },
+        processName: String = sessionProcessName.ifBlank { "unknown" },
+        versionCode: Int = sessionVersionCode,
+        reason: String = "",
+    ) {
+        val diagnostic = InjectionDiagnostic(
+            stage = stage,
+            packageName = packageName,
+            processName = processName,
+            versionCode = versionCode,
+            status = status,
+            reason = reason,
+            updatedAt = System.currentTimeMillis()
+        )
+        injectionStatus = diagnostic
+        runCatching {
+            val file = File("${Option.basePath}/$INJECTION_STATUS_FILE_NAME")
+            file.parentFile?.mkdirs()
+            file.writeText(JSON.toJSONString(diagnostic))
+        }.onFailure {
+            YLog.error(
+                msg = "persist injection diagnostic failed: ${it.toDiagnosticReason()}",
+                tag = YLog.Configs.tag
+            )
+        }
+    }
+
+    @Synchronized
+    fun refreshInjectionStatus() {
+        injectionStatus = loadInjectionDiagnostic()
+    }
+
+    @Synchronized
     private fun update(featureId: HookFeatureId, status: HookStatus, reason: String = "") {
         registry[featureId.key] = HookDiagnostic(
             featureId = featureId,
@@ -141,6 +199,12 @@ object HookDiagnostics {
         )
         diagnostics = registry.values.sortedBy { it.featureId.displayName }
     }
+
+    private fun loadInjectionDiagnostic(): InjectionDiagnostic? = runCatching {
+        val file = File("${Option.basePath}/$INJECTION_STATUS_FILE_NAME")
+        if (!file.exists()) return null
+        JSON.parseObject(file.readText(), InjectionDiagnostic::class.java)
+    }.getOrNull()
 }
 
 inline fun trackHookFeature(featureId: HookFeatureId, block: () -> Unit) {
@@ -188,7 +252,7 @@ private fun Throwable.isMissingSymbol(): Boolean =
                 message.contains("failed to find", ignoreCase = true)
     }
 
-private fun Throwable.toDiagnosticReason(): String =
+fun Throwable.toDiagnosticReason(): String =
     generateSequence(this) { it.cause }
         .mapNotNull { throwable ->
             val name = throwable::class.java.simpleName.ifBlank { throwable::class.java.name }

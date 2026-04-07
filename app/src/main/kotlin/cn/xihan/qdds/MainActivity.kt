@@ -127,7 +127,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ModuleAppCompatActivity() {
 
-    val versionCode by lazy { getVersionCode(Option.targetPackageName()) }
+    val versionCode by lazy { getVersionCode(Option.FIXED_QD_PACKAGE_NAME) }
 
     override val moduleTheme =
         com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar
@@ -152,9 +152,21 @@ class MainActivity : ModuleAppCompatActivity() {
             )
         )
         val navController = rememberNavController()
+        val lifecycleOwner = LocalLifecycleOwner.current
         var allowDisclaimers by rememberMutableStateOf(value = optionEntity.allowDisclaimers && optionEntity.currentDisclaimersVersionCode >= defaultOptionEntity.latestDisclaimersVersionCode)
         var currentDisclaimersVersionCode by rememberMutableStateOf(value = optionEntity.currentDisclaimersVersionCode)
         val latestDisclaimersVersionCode by rememberMutableStateOf(value = defaultOptionEntity.latestDisclaimersVersionCode)
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    HookDiagnostics.refreshInjectionStatus()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -958,6 +970,15 @@ class MainActivity : ModuleAppCompatActivity() {
                 .height(if (isTablet) 58.dp else 38.dp)
         }
         PrimaryCard(modifier = Modifier.padding(padding)) {
+            InjectionDiagnosticCard(
+                versionCode = versionCode,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            CompatibilityDiagnosticCard(
+                versionCode = versionCode,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
 
             ItemWithSwitch(text = "隐藏桌面图标",
                 modifier = itemModifier,
@@ -1276,6 +1297,49 @@ private fun PrimaryCard(
 }
 
 @Composable
+private fun InjectionDiagnosticCard(
+    versionCode: Int,
+    modifier: Modifier = Modifier,
+) {
+    val injectionStatus = HookDiagnostics.injectionStatus
+
+    PrimaryCard(title = "宿主注入状态", modifier = modifier) {
+        Column(modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) {
+            Text(
+                text = "固定宿主包名: ${Option.FIXED_QD_PACKAGE_NAME}\n起点内部版本号: $versionCode\nHook 运行模式: ${HookDiagnostics.sessionMode}\nLSPosed API 最低要求: ${HookDiagnostics.MIN_API_VERSION}+",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (injectionStatus == null) {
+                Text(
+                    text = "当前还没有采集到宿主注入记录。",
+                    color = MaterialTheme.colorScheme.error
+                )
+                return@Column
+            }
+            Text(
+                text = "状态: ${injectionStatus.status.toStatusLabel()}",
+                color = injectionStatus.status.toStatusColor(),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "阶段: ${injectionStatus.stage}\n宿主包名: ${injectionStatus.packageName}\n进程名: ${injectionStatus.processName}\n版本号: ${injectionStatus.versionCode}\n更新时间: ${injectionStatus.updatedAt.toDisplayTime()}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (injectionStatus.reason.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = injectionStatus.reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun CompatibilityDiagnosticCard(
     versionCode: Int,
     modifier: Modifier = Modifier,
@@ -1343,12 +1407,28 @@ private fun HookStatus.toStatusColor(): Color = when (this) {
     HookStatus.Failed -> MaterialTheme.colorScheme.error
 }
 
+@Composable
+private fun InjectionStatus.toStatusColor(): Color = when (this) {
+    InjectionStatus.Succeeded -> Color(0xFF1B8F3A)
+    InjectionStatus.Skipped -> Color(0xFFD87A00)
+    InjectionStatus.Failed -> MaterialTheme.colorScheme.error
+}
+
 private fun HookStatus.toStatusLabel(): String = when (this) {
     HookStatus.Pending -> "待执行"
     HookStatus.Hooked -> "已命中"
     HookStatus.MissingSymbol -> "未命中"
     HookStatus.Failed -> "失败"
 }
+
+private fun InjectionStatus.toStatusLabel(): String = when (this) {
+    InjectionStatus.Succeeded -> "已注入"
+    InjectionStatus.Skipped -> "已跳过"
+    InjectionStatus.Failed -> "失败"
+}
+
+private fun Long.toDisplayTime(): String =
+    SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(this)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
