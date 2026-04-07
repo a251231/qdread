@@ -10,8 +10,6 @@ import cn.xihan.qdds.Option.optionEntity
 import cn.xihan.qdds.Option.picturesPath
 import cn.xihan.qdds.Option.updateOptionEntity
 import cn.xihan.qdds.Option.writeTextFile
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
@@ -22,7 +20,6 @@ import com.highcapable.yukihookapi.hook.type.java.LongType
 import com.highcapable.yukihookapi.hook.type.java.MapClass
 import com.highcapable.yukihookapi.hook.type.java.StringClass
 import com.highcapable.yukihookapi.hook.type.java.UnitType
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import org.json.JSONObject
@@ -37,8 +34,7 @@ import java.lang.reflect.Modifier
  * @介绍 : Hook 入口
  * @suppress Generate Documentation
  */
-@InjectYukiHookWithXposed
-class HookEntry : IYukiHookXposedInit {
+class HookEntry {
 
     init {
         if (Option.shouldEnableHooks()) {
@@ -50,16 +46,16 @@ class HookEntry : IYukiHookXposedInit {
         }
     }
 
-    override fun onInit() = YukiHookAPI.configs {
+    fun configureLogging() {
         YLog.Configs.apply {
             tag = "yuki"
             isEnable = BuildConfig.DEBUG
         }
     }
 
-    override fun onHook() = YukiHookAPI.encase {
-        if (packageName != QD_PACKAGE_NAME) return@encase
-        loadApp(name = packageName) {
+    fun install(packageParam: PackageParam) = packageParam.withRuntime {
+        if (packageName != QD_PACKAGE_NAME) return@withRuntime
+        runCatching {
             HookDiagnostics.beginSession(
                 packageName = packageName,
                 versionCode = actualVersionCode,
@@ -112,6 +108,9 @@ class HookEntry : IYukiHookXposedInit {
 //
 //            findMethodAndPrint("uj.b")
 
+        }.onFailure {
+            YLog.error(msg = "install hook entry failed: ${it.message}", tag = YLog.Configs.tag)
+            throw it
         }
     }
 

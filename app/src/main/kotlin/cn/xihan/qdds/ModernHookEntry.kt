@@ -76,8 +76,8 @@ class ModernHookEntry : XposedModule() {
             applicationContext = context.applicationContext ?: context,
             receiver = null
         ) {
-            entry.onInit()
-            entry.onHook()
+            entry.configureLogging()
+            entry.install(installedParam)
         }
         log(Log.INFO, TAG, "modern hooks installed for $installKey")
     }
