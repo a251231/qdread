@@ -73,6 +73,13 @@ public *** getLocalOverscrollConfiguration(...);
     *** Companion;
 }
 
+#---------------------------------LSPosed Modern API---------------------------------
+# Modern API entry class is referenced by META-INF/xposed/java_init.list and must
+# remain loadable in release builds.
+-keep class cn.xihan.qdds.ModernHookEntry { *; }
+-keepnames class cn.xihan.qdds.ModernHookEntry
+-adaptresourcefilecontents META-INF/xposed/*.list
+
 
 -dontwarn java.lang.ClassValue
 -dontwarn org.bouncycastle.jsse.BCSSLParameters

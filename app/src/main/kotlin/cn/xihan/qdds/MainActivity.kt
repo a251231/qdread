@@ -970,15 +970,6 @@ class MainActivity : ModuleAppCompatActivity() {
                 .height(if (isTablet) 58.dp else 38.dp)
         }
         PrimaryCard(modifier = Modifier.padding(padding)) {
-            InjectionDiagnosticCard(
-                versionCode = versionCode,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            CompatibilityDiagnosticCard(
-                versionCode = versionCode,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
 
             ItemWithSwitch(text = "隐藏桌面图标",
                 modifier = itemModifier,

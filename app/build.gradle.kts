@@ -13,6 +13,7 @@ import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.util.Properties
+import java.util.zip.ZipFile
 
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
@@ -214,9 +215,63 @@ fun execAndGetOutput(vararg args: String): String {
     return outputStream.toString().trim()
 }
 
+val verifyReleaseModernMetadata by tasks.registering {
+    group = "verification"
+    dependsOn(":app:assembleRelease")
+    doLast {
+        val apkDir = File(project.buildDir, "outputs" + File.separator + "apk" + File.separator + "release")
+        require(apkDir.exists()) { "release apk output not found: $apkDir" }
+        val apkFiles = apkDir.listFiles()?.filter { it.isFile && it.extension == "apk" } ?: emptyList()
+        require(apkFiles.size == 1) { "release apk output should contain exactly one apk, found ${apkFiles.size}" }
+        val apkFile = apkFiles.single()
+
+        ZipFile(apkFile).use { zip ->
+            fun requireEntryText(path: String): String {
+                val entry = requireNotNull(zip.getEntry(path)) { "missing release metadata entry: $path" }
+                return zip.getInputStream(entry).bufferedReader().use { it.readText() }
+            }
+
+            val javaInit = requireEntryText("META-INF/xposed/java_init.list")
+            val moduleProp = requireEntryText("META-INF/xposed/module.prop")
+            val scopeList = requireEntryText("META-INF/xposed/scope.list")
+
+            require("minApiVersion=101" in moduleProp) { "module.prop lost minApiVersion=101" }
+            require("targetApiVersion=101" in moduleProp) { "module.prop lost targetApiVersion=101" }
+            val fixedQdPackageName = "com.qidian.QDReader"
+            require(scopeList.lineSequence().map { it.trim() }.any { it == fixedQdPackageName }) {
+                "scope.list does not contain $fixedQdPackageName"
+            }
+
+            val entryClassName = javaInit.lineSequence()
+                .map { it.trim() }
+                .firstOrNull { it.isNotBlank() }
+                ?: error("java_init.list is empty")
+            val entryDescriptor = entryClassName.replace('.', '/')
+
+            var dexContainsEntry = false
+            val entries = zip.entries()
+            while (entries.hasMoreElements() && !dexContainsEntry) {
+                val entry = entries.nextElement()
+                if (entry.isDirectory || !entry.name.endsWith(".dex")) continue
+                dexContainsEntry = zip.getInputStream(entry).use { input ->
+                    val bytes = input.readBytes()
+                    String(bytes, Charsets.ISO_8859_1).contains(entryDescriptor)
+                }
+            }
+            require(dexContainsEntry) {
+                "modern entry class $entryClassName is not present in release dex payload"
+            }
+        }
+    }
+}
+
+tasks.named("assembleRelease").configure {
+    finalizedBy(verifyReleaseModernMetadata)
+}
+
 val synthesizeDistReleaseApksCI by tasks.registering {
     group = "build"
-    dependsOn(":app:packageRelease")
+    dependsOn(verifyReleaseModernMetadata)
     inputs.files(tasks.named("packageRelease").get().outputs.files)
     val srcApkDir =
         File(project.buildDir, "outputs" + File.separator + "apk" + File.separator + "release")

@@ -96,13 +96,6 @@ class ModernHookEntry : XposedModule() {
             entry.configureLogging()
             entry.install(installedParam)
         }
-        traceInjection(
-            stage = "HookEntry.install",
-            status = InjectionStatus.Succeeded,
-            packageName = installedParam.packageName,
-            processName = installedParam.processName,
-            versionCode = context.getVersionCode(installedParam.packageName)
-        )
         log(Log.INFO, TAG, "modern hooks installed for $installKey")
     }
 

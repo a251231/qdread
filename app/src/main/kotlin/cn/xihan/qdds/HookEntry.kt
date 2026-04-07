@@ -56,13 +56,6 @@ class HookEntry {
     fun install(packageParam: PackageParam) = packageParam.withRuntime {
         if (packageName != QD_PACKAGE_NAME) return@withRuntime
         runCatching {
-            HookDiagnostics.recordInjection(
-                stage = "HookEntry.install",
-                status = InjectionStatus.Succeeded,
-                packageName = packageName,
-                processName = processName,
-                versionCode = actualVersionCode
-            )
             HookDiagnostics.beginSession(
                 packageName = packageName,
                 versionCode = actualVersionCode,
@@ -87,13 +80,14 @@ class HookEntry {
                 }
             }
 
-            trackFeature(HookFeatures.ModuleSettingsEntry) {
+            HookDiagnostics.markPending(HookFeatures.ModuleSettingsEntry)
+            runCatching {
                 "com.qidian.QDReader.ui.activity.MoreActivity".toClass().apply {
-                method {
-                    name = "initWidget"
-                    emptyParam()
-                    returnType = UnitType
-                }.hook().after {
+                    method {
+                        name = "initWidget"
+                        emptyParam()
+                        returnType = UnitType
+                    }.hook().after {
                     // 获取 MoreActivity 实例
                     val readMoreSetting = instance.getView<RelativeLayout>("readMoreSetting")
                     // 获取 readMoreSetting 子控件
@@ -107,6 +101,26 @@ class HookEntry {
                     }
                 }
                 }
+            }.onSuccess {
+                HookDiagnostics.markHooked(HookFeatures.ModuleSettingsEntry)
+                HookDiagnostics.recordInjection(
+                    stage = "Probe.MoreActivity.initWidget",
+                    status = InjectionStatus.Succeeded,
+                    packageName = packageName,
+                    processName = processName,
+                    versionCode = actualVersionCode
+                )
+            }.onFailure {
+                HookDiagnostics.markThrowable(HookFeatures.ModuleSettingsEntry, it)
+                HookDiagnostics.recordInjection(
+                    stage = "Probe.MoreActivity.initWidget",
+                    status = InjectionStatus.Failed,
+                    packageName = packageName,
+                    processName = processName,
+                    versionCode = actualVersionCode,
+                    reason = it.toDiagnosticReason()
+                )
+                throw it
             }
 
 //            findMethodAndPrint("a.c")
