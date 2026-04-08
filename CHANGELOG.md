@@ -1,4 +1,11 @@
 # Changelog
+## [3.1.1](https://github.com/a251231/qdread/compare/v3.1.20...v3.1.1) (2026-04-08)
+
+
+### Bug Fixes
+
+* keep injection diagnostics per process ([a672565](https://github.com/a251231/qdread/commit/a6725658215983901d96740819bb4e05b8007c25))
+
 ## [3.1.1](https://github.com/xihan123/QDReadHook/compare/v3.1.0...v3.1.1) (2024-03-17)
 
 
