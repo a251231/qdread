@@ -1293,6 +1293,7 @@ private fun InjectionDiagnosticCard(
     modifier: Modifier = Modifier,
 ) {
     val injectionStatus = HookDiagnostics.injectionStatus
+    val injectionStatuses = HookDiagnostics.injectionStatuses
 
     PrimaryCard(title = "宿主注入状态", modifier = modifier) {
         Column(modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) {
@@ -1325,6 +1326,34 @@ private fun InjectionDiagnosticCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            if (injectionStatuses.size > 1) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "杩涚▼璇婃柇鍒楄〃",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                injectionStatuses.sortedByDescending { it.updatedAt }.forEach { diagnostic ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "${diagnostic.processName} [${diagnostic.status.toStatusLabel()}]",
+                        color = diagnostic.status.toStatusColor(),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "${diagnostic.stage}  ${diagnostic.updatedAt.toDisplayTime()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (diagnostic.reason.isNotBlank()) {
+                        Text(
+                            text = diagnostic.reason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

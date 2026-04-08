@@ -1,6 +1,7 @@
 package cn.xihan.qdds
 
 import com.alibaba.fastjson2.JSON
+import com.alibaba.fastjson2.annotation.JSONField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -47,13 +48,25 @@ data class HookDiagnostic(
 )
 
 data class InjectionDiagnostic(
+    @JSONField(name = "stage")
     val stage: String,
+    @JSONField(name = "packageName")
     val packageName: String,
+    @JSONField(name = "processName")
     val processName: String,
+    @JSONField(name = "versionCode")
     val versionCode: Int,
+    @JSONField(name = "status")
     val status: InjectionStatus,
+    @JSONField(name = "reason")
     val reason: String = "",
+    @JSONField(name = "updatedAt")
     val updatedAt: Long = System.currentTimeMillis(),
+)
+
+data class InjectionDiagnosticsSnapshot(
+    @JSONField(name = "entries")
+    val entries: List<InjectionDiagnostic> = emptyList(),
 )
 
 object HookFeatures {
@@ -88,6 +101,7 @@ object HookFeatures {
 object HookDiagnostics {
     const val MIN_API_VERSION = 101
     private const val INJECTION_STATUS_FILE_NAME = "hook_injection_status.json"
+    private const val UNKNOWN_PROCESS_NAME = "unknown"
 
     private val registry = linkedMapOf<String, HookDiagnostic>()
 
@@ -103,7 +117,9 @@ object HookDiagnostics {
         private set
     var diagnostics by mutableStateOf<List<HookDiagnostic>>(emptyList())
         private set
-    var injectionStatus by mutableStateOf(loadInjectionDiagnostic())
+    var injectionStatuses by mutableStateOf(loadInjectionDiagnostics())
+        private set
+    var injectionStatus by mutableStateOf(selectInjectionStatus(loadInjectionDiagnostics()))
         private set
 
     @Synchronized
@@ -155,7 +171,7 @@ object HookDiagnostics {
         stage: String,
         status: InjectionStatus,
         packageName: String = sessionPackageName.ifBlank { Option.targetPackageName() },
-        processName: String = sessionProcessName.ifBlank { "unknown" },
+        processName: String = sessionProcessName.ifBlank { UNKNOWN_PROCESS_NAME },
         versionCode: Int = sessionVersionCode,
         reason: String = "",
     ) {
@@ -168,11 +184,22 @@ object HookDiagnostics {
             reason = reason,
             updatedAt = System.currentTimeMillis()
         )
-        injectionStatus = diagnostic
+        val processKey = "${diagnostic.packageName}#${diagnostic.processName}"
+        val updatedStatuses = injectionStatuses
+            .associateBy { "${it.packageName}#${it.processName}" }
+            .toMutableMap()
+            .apply { this[processKey] = diagnostic }
+            .values
+            .sortedWith(
+                compareByDescending<InjectionDiagnostic> { it.packageName == Option.targetPackageName() && it.processName == it.packageName }
+                    .thenByDescending { it.updatedAt }
+            )
+        injectionStatuses = updatedStatuses
+        injectionStatus = selectInjectionStatus(updatedStatuses)
         runCatching {
             val file = File("${Option.basePath}/$INJECTION_STATUS_FILE_NAME")
             file.parentFile?.mkdirs()
-            file.writeText(JSON.toJSONString(diagnostic))
+            file.writeText(JSON.toJSONString(InjectionDiagnosticsSnapshot(updatedStatuses)))
         }.onFailure {
             YLog.error(
                 msg = "persist injection diagnostic failed: ${it.toDiagnosticReason()}",
@@ -183,7 +210,8 @@ object HookDiagnostics {
 
     @Synchronized
     fun refreshInjectionStatus() {
-        injectionStatus = loadInjectionDiagnostic()
+        injectionStatuses = loadInjectionDiagnostics()
+        injectionStatus = selectInjectionStatus(injectionStatuses)
     }
 
     @Synchronized
@@ -200,11 +228,27 @@ object HookDiagnostics {
         diagnostics = registry.values.sortedBy { it.featureId.displayName }
     }
 
-    private fun loadInjectionDiagnostic(): InjectionDiagnostic? = runCatching {
+    private fun loadInjectionDiagnostics(): List<InjectionDiagnostic> = runCatching {
         val file = File("${Option.basePath}/$INJECTION_STATUS_FILE_NAME")
-        if (!file.exists()) return null
-        JSON.parseObject(file.readText(), InjectionDiagnostic::class.java)
-    }.getOrNull()
+        if (!file.exists()) return emptyList()
+        val text = file.readText()
+        JSON.parseObject(text, InjectionDiagnosticsSnapshot::class.java)?.entries
+            ?.takeIf { it.isNotEmpty() }
+            ?: JSON.parseArray(text, InjectionDiagnostic::class.java)?.toList()
+            ?: listOfNotNull(JSON.parseObject(text, InjectionDiagnostic::class.java))
+    }.getOrElse { emptyList() }
+
+    private fun selectInjectionStatus(statuses: List<InjectionDiagnostic>): InjectionDiagnostic? =
+        statuses.maxWithOrNull(
+            compareBy<InjectionDiagnostic> {
+                when {
+                    it.packageName == Option.targetPackageName() && it.processName == it.packageName -> 3
+                    it.status == InjectionStatus.Failed -> 2
+                    it.status == InjectionStatus.Succeeded -> 1
+                    else -> 0
+                }
+            }.thenBy { it.updatedAt }
+        )
 }
 
 inline fun trackHookFeature(featureId: HookFeatureId, block: () -> Unit) {
