@@ -217,7 +217,7 @@ fun execAndGetOutput(vararg args: String): String {
 
 val verifyReleaseModernMetadata by tasks.registering {
     group = "verification"
-    dependsOn(":app:assembleRelease")
+    dependsOn(":app:packageRelease")
     doLast {
         val apkDir = File(project.buildDir, "outputs" + File.separator + "apk" + File.separator + "release")
         require(apkDir.exists()) { "release apk output not found: $apkDir" }
@@ -263,10 +263,6 @@ val verifyReleaseModernMetadata by tasks.registering {
             }
         }
     }
-}
-
-tasks.named("assembleRelease").configure {
-    finalizedBy(verifyReleaseModernMetadata)
 }
 
 val synthesizeDistReleaseApksCI by tasks.registering {
