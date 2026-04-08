@@ -217,7 +217,7 @@ fun execAndGetOutput(vararg args: String): String {
 
 val verifyReleaseModernMetadata by tasks.registering {
     group = "verification"
-    dependsOn(":app:packageRelease")
+    dependsOn("assemble")
     doLast {
         val apkDir = File(project.buildDir, "outputs" + File.separator + "apk" + File.separator + "release")
         require(apkDir.exists()) { "release apk output not found: $apkDir" }
@@ -268,14 +268,8 @@ val verifyReleaseModernMetadata by tasks.registering {
 val synthesizeDistReleaseApksCI by tasks.registering {
     group = "build"
     dependsOn(verifyReleaseModernMetadata)
-    inputs.files(tasks.named("packageRelease").get().outputs.files)
     val srcApkDir =
         File(project.buildDir, "outputs" + File.separator + "apk" + File.separator + "release")
-    if (srcApkDir !in tasks.named("packageRelease").get().outputs.files) {
-        val msg = "srcApkDir should be in packageRelease outputs, srcApkDir: $srcApkDir, " +
-                "packageRelease outputs: ${tasks.named("packageRelease").get().outputs.files.files}"
-        logger.error(msg)
-    }
     val outputAbiVariants = mapOf(
         "arm32" to arrayOf("armeabi-v7a"),
         "arm64" to arrayOf("arm64-v8a"),
